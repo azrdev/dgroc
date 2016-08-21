@@ -10,7 +10,10 @@ License: GPLv3 or any later version.
 """
 
 import argparse
-import ConfigParser
+try:
+    import configparser
+except:
+    from six.moves import configparser
 import datetime
 import glob
 import logging
@@ -48,7 +51,7 @@ class DgrocException(Exception):
 
 
 class GitReader(object):
-    '''Defualt version control system to use: git'''
+    '''Default version control system to use: git'''
     short = 'git'
 
     @classmethod
@@ -122,7 +125,7 @@ def _get_copr_auth():
     if not os.path.exists(copr_config_file):
         raise DgrocException('No `~/.config/copr` file found.')
 
-    copr_config = ConfigParser.ConfigParser()
+    copr_config = configparser.ConfigParser()
     copr_config.read(copr_config_file)
 
     if not copr_config.has_option('copr-cli', 'username'):
@@ -179,6 +182,7 @@ def update_spec(spec_file, commit_hash, archive_name, packager, email, reader):
     release = '%s%s%s' % (date.today().strftime('%Y%m%d'), reader.short, commit_hash)
     output = []
     version = None
+    rel_num = 1
     rpm.spec(spec_file)
     with open(spec_file) as stream:
         for row in stream:
@@ -545,7 +549,7 @@ def main():
         LOG.setLevel(logging.INFO)
 
     # Read configuration file
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(args.config)
 
     if not config.has_option('main', 'username'):
@@ -567,7 +571,7 @@ def main():
             srpm = generate_new_srpm(config, project)
             if srpm:
                 srpms[project] = srpm
-        except DgrocException, err:
+        except DgrocException as err:
             LOG.info('%s: %s', project, err)
 
     LOG.info('%s srpms generated', len(srpms))
@@ -578,13 +582,13 @@ def main():
         return
 
     try:
-        upload_srpms(config, srpms.values())
-    except DgrocException, err:
+        upload_srpms(config, list(srpms.values()))
+    except DgrocException as err:
         LOG.info(err)
 
     try:
         build_ids = copr_build(config, srpms)
-    except DgrocException, err:
+    except DgrocException as err:
         LOG.info(err)
 
     if args.monitoring:
